@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"encoding/json"
+	"github.com/gorilla/mux"
+	"strconv"
 )
 
 type Hero struct {
@@ -24,7 +26,7 @@ var heroes = []Hero {
 	Hero{ Id: 10, Name: "Tornado" },
 }
 
-func handleHeroesRequest(w http.ResponseWriter, r *http.Request) {
+func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/api/heroes" {
 		http.NotFound(w, r)
 		return
@@ -48,12 +50,53 @@ func handleHeroesRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleOneHeroRequest(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("here")
+	switch r.Method {
+	case "GET" :
+		vars := mux.Vars(r)
+		varId, err := strconv.Atoi(vars["id"])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var hero Hero
+		for _, currHero := range heroes {
+			if currHero.Id == varId {
+				hero = currHero
+			}
+		}
+
+		if hero == (Hero{}) {
+			return
+		}
+
+		heroBytes, err := json.Marshal(hero)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(heroBytes)
+	default :
+		fmt.Printf("Error: not a GET request\n")
+	}
+}
+
 func setupRoutes() {
-	http.HandleFunc("/api/heroes", handleHeroesRequest)
+	// return r
 }
 
 func main() {
 	fmt.Println("Hero Server version 1.0\n")
-	setupRoutes()
-	http.ListenAndServe(":8080", nil)
+	// r := setupRoutes()
+
+	r := mux.NewRouter()
+	r.HandleFunc("/api/heroes", handleAllHeroesRequest)
+	r.HandleFunc("/api/heroes/{id}", handleOneHeroRequest)
+
+	http.ListenAndServe(":8080", r)
 }
