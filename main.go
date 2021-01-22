@@ -24,6 +24,16 @@ var heroes = []Hero {
   Hero{ Id: 8, Name: "Dr IQ" },
   Hero{ Id: 9, Name: "Magma" },
 	Hero{ Id: 10, Name: "Tornado" },
+  Hero{ Id: 11, Name: "second Dr Nice" },
+  Hero{ Id: 12, Name: "second Narco" },
+  Hero{ Id: 13, Name: "second Bombasto" },
+  Hero{ Id: 14, Name: "second Celeritas" },
+  Hero{ Id: 15, Name: "second Magneta" },
+  Hero{ Id: 16, Name: "second RubberMan" },
+  Hero{ Id: 17, Name: "second Dynama" },
+  Hero{ Id: 18, Name: "second Dr IQ" },
+  Hero{ Id: 19, Name: "second Magma" },
+	Hero{ Id: 20, Name: "second Tornado" },
 }
 
 func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
