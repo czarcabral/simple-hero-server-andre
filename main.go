@@ -65,18 +65,21 @@ func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// loop through heroes array and return index of lastHeroId
 			index := -1
-			for i, hero := range heroes {
-				if hero.Id == lastHeroId {
-					index = i
-					break
-				}
-			}
 
-			if index == -1 {
-				fmt.Printf("ERROR: hero at lastHeroId not found")
-				return
+			if (lastHeroId > -1) {
+				// loop through heroes array and return index of lastHeroId
+				for i, hero := range heroes {
+					if hero.Id == lastHeroId {
+						index = i
+						break
+					}
+				}
+
+				if index == -1 {
+					fmt.Printf("ERROR: hero at lastHeroId not found")
+					return
+				}
 			}
 
 			index = index + 1
