@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"strconv"
+	"os"
 )
 
 type Hero struct {
@@ -149,5 +150,12 @@ func main() {
 	r.HandleFunc("/api/heroes", handleAllHeroesRequest)
 	r.HandleFunc("/api/heroes/{id}", handleOneHeroRequest)
 
-	http.ListenAndServe(":8080", r)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "5000"
+	}
+
+	fmt.Println("hey "+port)
+
+	http.ListenAndServe(":" + port, r)
 }
