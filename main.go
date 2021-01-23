@@ -44,15 +44,53 @@ func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET" :
-		heroesBytes, err := json.Marshal(heroes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(heroesBytes)
+
+		lastHeroIds, ok := r.URL.Query()["lastHeroId"]
+		if !ok || len(lastHeroIds[0]) == 0 {
+			fmt.Printf("URL Param '%v' is missing\n", "lastHeroId")
+
+			heroesBytes, err := json.Marshal(heroes)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			w.Write(heroesBytes)
+		} else {
+			lastHeroId, err := strconv.Atoi(lastHeroIds[0])
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// loop through heroes array and return index of lastHeroId
+			index := -1
+			for i, hero := range heroes {
+				if hero.Id == lastHeroId {
+					index = i
+					break
+				}
+			}
+
+			if index == -1 {
+				fmt.Printf("ERROR: hero at lastHeroId not found")
+				return
+			}
+
+			index = index + 1
+
+			paginatedHeroes := heroes[index:index+4]
+
+			paginatedHeroesBytes, err := json.Marshal(paginatedHeroes)
+			if (err != nil) {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			w.Write(paginatedHeroesBytes)
+		}
 	case "POST" :
 		fmt.Printf("Received a POST request\n")
 	default :
