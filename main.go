@@ -14,28 +14,25 @@ type Hero struct {
 	Name string `json:"name"`
 }
 
-var heroes = []Hero {
-  Hero{ Id: 1, Name: "Dr Nice" },
-  Hero{ Id: 2, Name: "Narco" },
-  Hero{ Id: 3, Name: "Bombasto" },
-  Hero{ Id: 4, Name: "Celeritas" },
-  Hero{ Id: 5, Name: "Magneta" },
-  Hero{ Id: 6, Name: "RubberMan" },
-  Hero{ Id: 7, Name: "Dynama" },
-  Hero{ Id: 8, Name: "Dr IQ" },
-  Hero{ Id: 9, Name: "Magma" },
-	Hero{ Id: 10, Name: "Tornado" },
-  Hero{ Id: 11, Name: "second Dr Nice" },
-  Hero{ Id: 12, Name: "second Narco" },
-  Hero{ Id: 13, Name: "second Bombasto" },
-  Hero{ Id: 14, Name: "second Celeritas" },
-  Hero{ Id: 15, Name: "second Magneta" },
-  Hero{ Id: 16, Name: "second RubberMan" },
-  Hero{ Id: 17, Name: "second Dynama" },
-  Hero{ Id: 18, Name: "second Dr IQ" },
-  Hero{ Id: 19, Name: "second Magma" },
-	Hero{ Id: 20, Name: "second Tornado" },
+type HeroPostRequestBody struct {
+	HeroName string `json:"heroName"`
 }
+
+func idGenerator() func() int {
+	i := 2
+	return func() int {
+		i += 1
+		return i
+	}
+}
+
+var nextId = idGenerator()
+
+func newHero(heroName string) Hero {
+	return Hero{Id: nextId(), Name: heroName}
+}
+
+var heroes []Hero
 
 func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/api/heroes" {
@@ -96,11 +93,24 @@ func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
 			w.Write(paginatedHeroesBytes)
 		}
 	case "POST" :
-		fmt.Println("hitting POST method")
-		r.ParseForm()
-		fmt.Println(r.Form)
-		hero, _ := json.Marshal(Hero{Id:0, Name:"Gab"})
-		w.Write(hero)
+		var heroPostRequestBody HeroPostRequestBody
+
+    // Try to decode the request body into the struct. If there is an error,
+    // respond to the client with the error message and a 400 status code.
+    err := json.NewDecoder(r.Body).Decode(&heroPostRequestBody)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+
+		heroName := heroPostRequestBody.HeroName
+		if heroName == "" {
+			heroName = "Default"
+		}
+		hero := newHero(heroName)
+		heroes = append(heroes, hero)
+		heroBytes, _ := json.Marshal(hero)
+		w.Write(heroBytes)
 	default :
 		fmt.Printf("Error: not a GET or POST request\n")
 	}
@@ -149,6 +159,33 @@ func setupRoutes() {
 func main() {
 	fmt.Println("Hero Server version 1.0\n")
 	// r := setupRoutes()
+
+	// initialize hero data
+	heroNames := []string {
+		"Dr Nice",
+		"Narco",
+		"Bombasto",
+		"Celeritas",
+		"Magneta",
+		"RubberMan",
+		"Dynama",
+		"Dr IQ",
+		"Magma",
+		"Tornado",
+		"second Dr Nice",
+		"second Narco",
+		"second Bombasto",
+		"second Celeritas",
+		"second Magneta",
+		"second RubberMan",
+		"second Dynama",
+		"second Dr IQ",
+		"second Magma",
+		"second Tornado",
+	}
+	for _, heroName := range heroNames {
+		heroes = append(heroes, newHero(heroName))
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/heroes", handleAllHeroesRequest)
