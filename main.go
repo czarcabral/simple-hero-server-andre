@@ -43,11 +43,11 @@ func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "application/json")
+
 	switch r.Method {
 	case "GET" :
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Content-Type", "application/json")
-
 		lastHeroIds, ok := r.URL.Query()["lastHeroId"]
 		if !ok || len(lastHeroIds[0]) == 0 {
 			fmt.Printf("URL Param '%v' is missing\n", "lastHeroId")
@@ -158,8 +158,6 @@ func main() {
 	if port == "" {
 		port = "5000"
 	}
-
-	fmt.Println("hey "+port)
 
 	http.ListenAndServe(":" + port, r)
 }
