@@ -96,7 +96,10 @@ func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
 			w.Write(paginatedHeroesBytes)
 		}
 	case "POST" :
-		fmt.Printf("Received a POST request\n")
+		r.ParseForm()
+		fmt.Println(r.Form)
+		hero, _ := json.Marshal(Hero{Id:0, Name:"Gab"})
+		w.Write(hero)
 	default :
 		fmt.Printf("Error: not a GET or POST request\n")
 	}
