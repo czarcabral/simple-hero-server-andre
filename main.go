@@ -96,6 +96,7 @@ func handleAllHeroesRequest(w http.ResponseWriter, r *http.Request) {
 			w.Write(paginatedHeroesBytes)
 		}
 	case "POST" :
+		fmt.Println("hitting POST method")
 		r.ParseForm()
 		fmt.Println(r.Form)
 		hero, _ := json.Marshal(Hero{Id:0, Name:"Gab"})
