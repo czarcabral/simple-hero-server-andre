@@ -17,6 +17,7 @@ type Hero struct {
 	Name string `json:"name"`
 }
 
+// generates the next id for each hero
 func idGenerator() func() int {
 	i := 0
 	return func() int {
@@ -25,12 +26,15 @@ func idGenerator() func() int {
 	}
 }
 
+// a single global instance of the id generator
 var nextID func() int = idGenerator()
 
+// constructor for creating a new hero
 func newHero(heroName string) Hero {
 	return Hero{ID: nextID(), Name: heroName}
 }
 
+// gets a paginated list of heroes
 func getPaginatedHeroes(heroes *[]Hero, lastHeroID int) ([]Hero, error) {
 
 	// keep track of index of heroes to return
@@ -59,6 +63,7 @@ func getPaginatedHeroes(heroes *[]Hero, lastHeroID int) ([]Hero, error) {
 	return (*heroes)[index:endIndex], nil
 }
 
+// adds a hero to the hero list
 func addHero(heroes *[]Hero, requestHero Hero) (Hero, error) {
 
 	// extract name from hero dto
@@ -90,6 +95,7 @@ func getHero(heroes *[]Hero, id int) (Hero, error) {
 	return (*heroes)[i], nil
 }
 
+// updates a specific hero in the hero list
 func updateHero(heroes *[]Hero, id int, requestHero Hero) (Hero, error) {
 
 	// extract name from hero dto
@@ -106,12 +112,15 @@ func updateHero(heroes *[]Hero, id int, requestHero Hero) (Hero, error) {
 		return Hero{}, fmt.Errorf("Error: hero with id=%v does not exist", id)
 	}
 
+	// modify the hero in place
 	hero := &(*heroes)[i]
 	(*hero).Name = requestHero.Name
 
+	// return the hero
 	return *hero, nil
 }
 
+// deletes a specific hero in the hero list
 func deleteHero(heroes *[]Hero, id int) error {
 
 	// find the hero in the heroes slice
@@ -142,6 +151,7 @@ func handleHeroesRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request) 
 		// handle http request based on type
 		switch r.Method {
 		case "GET":
+
 			// determine if paging by extracting lastHeroId query param
 			lastHeroIds, ok := r.URL.Query()["lastHeroId"]
 			if !ok || len(lastHeroIds[0]) == 0 {
