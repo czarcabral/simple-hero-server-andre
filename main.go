@@ -90,13 +90,43 @@ func getHero(heroes *[]Hero, id int) (Hero, error) {
 	return (*heroes)[i], nil
 }
 
-func updateHero(heroes *[]Hero, id int) (Hero, error) {
-	fmt.Println("updating hero")
-	return Hero{}, nil
+func updateHero(heroes *[]Hero, id int, requestHero Hero) (Hero, error) {
+
+	// extract name from hero dto
+	name := requestHero.Name
+	if name == "" {
+		return Hero{}, fmt.Errorf("ERROR: cannot add hero with no name")
+	}
+
+	// find the hero in the heroes slice
+	i := sort.Search(len(*heroes), func(i int) bool {
+		return (*heroes)[i].ID >= id
+	})
+	if i >= len(*heroes) || (*heroes)[i].ID != id {
+		return Hero{}, fmt.Errorf("Error: hero with id=%v does not exist", id)
+	}
+
+	hero := &(*heroes)[i]
+	(*hero).Name = requestHero.Name
+
+	return *hero, nil
 }
 
 func deleteHero(heroes *[]Hero, id int) error {
-	fmt.Println("deleting hero")
+
+	// find the hero in the heroes slice
+	i := sort.Search(len(*heroes), func(i int) bool {
+		return (*heroes)[i].ID >= id
+	})
+	if i >= len(*heroes) || (*heroes)[i].ID != id {
+		return fmt.Errorf("Error: hero with id=%v does not exist", id)
+	}
+
+	// shift all elements to the left to overwrite heroes[i]. Then reset last index. Then make heroes the new smaller slice
+	copy((*heroes)[i:], (*heroes)[i+1:])
+	(*heroes)[len(*heroes)-1] = Hero{}
+	*heroes = (*heroes)[:len(*heroes)-1]
+
 	return nil
 }
 
@@ -220,7 +250,16 @@ func handleHeroesIDRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request
 			// write response
 			w.Write(heroBytes)
 		case "PUT":
-			updatedHero, err := updateHero(heroes, varID)
+
+			// Try to decode the http request body into the struct
+			var requestHero Hero
+			err := json.NewDecoder(r.Body).Decode(&requestHero)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			updatedHero, err := updateHero(heroes, varID, requestHero)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
