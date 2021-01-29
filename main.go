@@ -31,129 +31,73 @@ func newHero(heroName string) Hero {
 	return Hero{ID: nextID(), Name: heroName}
 }
 
-func getHeroes(w http.ResponseWriter, r *http.Request, heroes *[]Hero) {
+func getPaginatedHeroes(heroes *[]Hero, lastHeroID int) ([]Hero, error) {
 
-	// determine if paging by extracting lastHeroId query param
-	lastHeroIds, ok := r.URL.Query()["lastHeroId"]
-	if !ok || len(lastHeroIds[0]) == 0 {
+	// keep track of index of heroes to return
+	index := -1
 
-		// if not paging, return full list of heroes
-		heroesBytes, err := json.Marshal(*heroes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+	// find the last hero seen in the heroes slice
+	if lastHeroID > -1 {
+		index = sort.Search(len(*heroes), func(i int) bool {
+			return (*heroes)[i].ID >= lastHeroID
+		})
+		if index >= len(*heroes) || (*heroes)[index].ID != lastHeroID {
+			return []Hero{}, fmt.Errorf("Error: hero with id=%v does not exist", lastHeroID)
 		}
-
-		w.Write(heroesBytes)
-	} else {
-
-		// extract ID of last hero seen
-		lastHeroID, err := strconv.Atoi(lastHeroIds[0])
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// keep track of index of heroes to return
-		index := -1
-
-		// find the last hero seen in the heroes slice
-		if lastHeroID > -1 {
-			index = sort.Search(len(*heroes), func(i int) bool {
-				return (*heroes)[i].ID >= lastHeroID
-			})
-			if index >= len(*heroes) || (*heroes)[index].ID != lastHeroID {
-				http.Error(w, fmt.Sprintf("Error: hero with id=%v does not exist\n", lastHeroID), http.StatusBadRequest)
-				return
-			}
-		}
-
-		// if invalid last hero id requested, start index at 0, otherwise start index at next hero to view
-		index++
-
-		// return paginated slice consisting of next 4 heroes (up till the end of the heroes slice)
-		// note: if index is at the length of the heroes slice, an empty slice will be returned
-		endIndex := index + 4
-		if len(*heroes) < endIndex {
-			endIndex = len(*heroes)
-		}
-		paginatedHeroes := (*heroes)[index:endIndex]
-
-		// convert to bytes for writing to http response
-		paginatedHeroesBytes, err := json.Marshal(paginatedHeroes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// write response
-		w.Write(paginatedHeroesBytes)
 	}
+
+	// if invalid last hero id requested, start index at 0, otherwise start index at next hero to view
+	index++
+
+	// return paginated slice consisting of next 4 heroes (up till the end of the heroes slice)
+	// note: if index is at the length of the heroes slice, an empty slice will be returned
+	endIndex := index + 4
+	if len(*heroes) < endIndex {
+		endIndex = len(*heroes)
+	}
+
+	return (*heroes)[index:endIndex], nil
 }
 
-func addHero(w http.ResponseWriter, r *http.Request, heroes *[]Hero) {
-	// Try to decode the http request body into the struct
-	var requestHero Hero
-	err := json.NewDecoder(r.Body).Decode(&requestHero)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+func addHero(heroes *[]Hero, requestHero Hero) (Hero, error) {
 
 	// extract name from hero dto
 	name := requestHero.Name
 	if name == "" {
-		http.Error(w, "ERROR: cannot add hero with no name\n", http.StatusBadRequest)
-		return
+		return Hero{}, fmt.Errorf("ERROR: cannot add hero with no name")
 	}
 
 	// create new hero and append to heroes array
-	hero := newHero(name)
+	newHero := newHero(name)
 
 	// add new hero to heroes data
-	*heroes = append(*heroes, hero)
+	*heroes = append(*heroes, newHero)
 
-	// convert hero to bytes for writing to http response
-	heroBytes, err := json.Marshal(hero)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// write response
-	w.Write(heroBytes)
+	return newHero, nil
 }
 
 // return one hero in response
-func getHero(w http.ResponseWriter, r *http.Request, heroes *[]Hero) {
-
-	// extract hero id from url path variable
-	vars := mux.Vars(r)
-	varID, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+func getHero(heroes *[]Hero, id int) (Hero, error) {
 
 	// find the hero in the heroes slice
 	i := sort.Search(len(*heroes), func(i int) bool {
-		return (*heroes)[i].ID >= varID
+		return (*heroes)[i].ID >= id
 	})
-	if i >= len(*heroes) || (*heroes)[i].ID != varID {
-		http.Error(w, fmt.Sprintf("Error: hero with id=%v does not exist\n", i), http.StatusBadRequest)
-		return
-	}
-	hero := (*heroes)[i]
-
-	// convert to bytes for writing http response
-	heroBytes, err := json.Marshal(hero)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if i >= len(*heroes) || (*heroes)[i].ID != id {
+		return Hero{}, fmt.Errorf("Error: hero with id=%v does not exist", id)
 	}
 
-	// write response
-	w.Write(heroBytes)
+	return (*heroes)[i], nil
+}
+
+func updateHero(heroes *[]Hero, id int) (Hero, error) {
+	fmt.Println("updating hero")
+	return Hero{}, nil
+}
+
+func deleteHero(heroes *[]Hero, id int) error {
+	fmt.Println("deleting hero")
+	return nil
 }
 
 // handles route: /api/heroes
@@ -168,9 +112,71 @@ func handleHeroesRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request) 
 		// handle http request based on type
 		switch r.Method {
 		case "GET":
-			getHeroes(w, r, heroes)
+			// determine if paging by extracting lastHeroId query param
+			lastHeroIds, ok := r.URL.Query()["lastHeroId"]
+			if !ok || len(lastHeroIds[0]) == 0 {
+
+				// convert all heroes into bytes to write in response
+				heroesBytes, err := json.Marshal(*heroes)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				// write response
+				w.Write(heroesBytes)
+			} else {
+
+				// extract ID of last hero seen
+				lastHeroID, err := strconv.Atoi(lastHeroIds[0])
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				// get the paginated heroes list
+				paginatedHeroes, err := getPaginatedHeroes(heroes, lastHeroID)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				// convert to bytes for writing to http response
+				paginatedHeroesBytes, err := json.Marshal(paginatedHeroes)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				// write response
+				w.Write(paginatedHeroesBytes)
+			}
 		case "POST":
-			addHero(w, r, heroes)
+
+			// Try to decode the http request body into the struct
+			var requestHero Hero
+			err := json.NewDecoder(r.Body).Decode(&requestHero)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			// add the requested hero
+			newHero, err := addHero(heroes, requestHero)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// convert hero to bytes for writing to http response
+			heroBytes, err := json.Marshal(newHero)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// write response
+			w.Write(heroBytes)
 		default:
 			http.Error(w, "Error: not a GET or POST request\n", http.StatusBadRequest)
 		}
@@ -180,14 +186,65 @@ func handleHeroesRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request) 
 // handles route: /api/heroes/{id}
 func handleHeroesIDRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		// set headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
 
+		// extract hero id from url path variable
+		vars := mux.Vars(r)
+		varID, err := strconv.Atoi(vars["id"])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		// handle http request based on type
 		switch r.Method {
 		case "GET":
-			getHero(w, r, heroes)
+
+			// get the hero with the given id
+			hero, err := getHero(heroes, varID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// convert to bytes for writing http response
+			heroBytes, err := json.Marshal(hero)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// write response
+			w.Write(heroBytes)
+		case "PUT":
+			updatedHero, err := updateHero(heroes, varID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// convert to bytes for writing http response
+			heroBytes, err := json.Marshal(updatedHero)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// write response
+			w.Write(heroBytes)
+		case "DELETE":
+			// delete the hero and check for errors
+			err := deleteHero(heroes, varID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// return success
+			w.Write([]byte("Success"))
 		default:
 			http.Error(w, "Error: not a GET request\n", http.StatusBadRequest)
 		}
