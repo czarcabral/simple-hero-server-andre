@@ -217,6 +217,8 @@ func handleHeroesRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request) 
 
 			// write response
 			w.Write(heroBytes)
+		case "OPTIONS":
+			w.WriteHeader(http.StatusOK)
 		default:
 			http.Error(w, "Error: not a GET or POST request\n", http.StatusBadRequest)
 		}
