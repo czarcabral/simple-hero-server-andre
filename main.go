@@ -145,7 +145,7 @@ func handleHeroesRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request) 
 		// set headers to allow all
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
 		// handle http request based on type
@@ -232,6 +232,7 @@ func handleHeroesIDRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request
 		// set headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS, PUT, DELETE")
 
 		// extract hero id from url path variable
 		vars := mux.Vars(r)
@@ -296,6 +297,8 @@ func handleHeroesIDRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request
 
 			// return success
 			w.Write([]byte("Success"))
+		case "OPTIONS":
+			w.WriteHeader(http.StatusOK)
 		default:
 			http.Error(w, "Error: not a GET request\n", http.StatusBadRequest)
 		}
