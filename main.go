@@ -296,7 +296,7 @@ func handleHeroesIDRoute(heroes *[]Hero) func(http.ResponseWriter, *http.Request
 			}
 
 			// return success
-			w.Write([]byte("Success"))
+			w.WriteHeader(http.StatusOK)
 		case "OPTIONS":
 			w.WriteHeader(http.StatusOK)
 		default:
